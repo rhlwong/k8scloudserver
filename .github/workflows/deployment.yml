@@ -1,0 +1,65 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CI
+
+# Controls when the workflow will run
+on:
+  workflow_call:
+    secrets:
+      ssh-pk:
+        #default: ${{ RICK_PRIVATE_KEY }}
+        required: true
+
+  # Triggers the workflow on push or pull request events but only for the "main" branch
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    environment: approval
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - name: Checkout Repository k8cloudserver
+        uses: actions/checkout@v3
+        with:
+          repository:  rhlwong/k8scloudserver 
+          path: k8cloudserver
+          
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.12.1  # Adjust the Python version as needed
+      
+      - name: install gcc
+        run: |
+          sudo apt-get -y update 
+          sudo apt-get -y install gcc
+          sudo apt-get -y install openssh-client
+
+      - name: Install Ansible
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible
+          
+      - name: Setup SSH Keys and known_hosts
+        env:
+            SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+        run: |
+            mkdir -p /home/runner/.ssh
+            echo "${{ secrets.ssh-pk }}" > /home/runner/.ssh/rick-private
+            chmod 400 /home/runner/.ssh/rick-private
+            ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+            ssh-add /home/runner/.ssh/rick-private
+      - name: Run Ansible Deploy
+        run: ansible-playbook -i /home/runner/_work/k8scloudserver/inventory.yml --private-key /home/runner/.ssh/rick-private -u cloud_user /home/runner/_work/k8scloudserver/site.yml
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: false  # Disable host key checking if necessary
