@@ -1,0 +1,4 @@
+[k8sLab]
+13c4528cfc1c.mylabserver.com ansible_ssh_host=3.255.252.160 #worknode01
+13c4528cfc2c.mylabserver.com ansible_ssh_host=54.246.241.116 #worknode02
+13c4528cfc3c.mylabserver.com ansible_ssh_host=34.245.26.165 #Adminnode01
