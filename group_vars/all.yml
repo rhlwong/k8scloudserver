@@ -1,0 +1,7 @@
+---
+# Kubernetes & containerd versions
+kube_version: "1.25.0"
+pod_network_cidr: "10.244.0.0/16"
+
+# Containerd configuration
+containerd_config_path: /etc/containerd/config.toml

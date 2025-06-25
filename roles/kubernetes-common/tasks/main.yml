@@ -1,0 +1,88 @@
+---
+- name: Disable swap (required by kubeadm)
+  ansible.builtin.command: swapoff -a
+  tags: common
+
+- name: Remove swap entry from /etc/fstab
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '(^.*swap.*$)'
+    replace: '# \1'
+  tags: common
+
+- name: Ensure br_netfilter module is loaded
+  ansible.builtin.modprobe:
+    name: br_netfilter
+    state: present
+  tags: common
+
+- name: Ensure sysctl params for Kubernetes networking
+  ansible.builtin.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    sysctl_set: yes
+    reload: yes
+  loop:
+    - { key: net.bridge.bridge-nf-call-iptables, value: 1 }
+    - { key: net.ipv4.ip_forward,            value: 1 }
+  tags: common
+
+- name: Install containerd and Kubernetes prerequisites
+  ansible.builtin.apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+      - containerd
+    state: latest
+    update_cache: yes
+  tags: common
+
+- name: Configure containerd with default config
+  ansible.builtin.command: |
+    mkdir -p /etc/containerd &&
+    containerd config default > {{ containerd_config_path }}
+  args:
+    creates: "{{ containerd_config_path }}"
+  tags: common
+
+- name: Restart containerd
+  ansible.builtin.service:
+    name: containerd
+    state: restarted
+    enabled: yes
+  tags: common
+
+- name: Add Kubernetes APT key
+  ansible.builtin.apt_key:
+    url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    state: present
+  tags: common
+
+- name: Add Kubernetes apt repository
+  ansible.builtin.apt_repository:
+    repo: deb http://apt.kubernetes.io/ kubernetes-xenial main
+    state: present
+  tags: common
+
+- name: Install kubelet, kubeadm and kubectl
+  ansible.builtin.apt:
+    name:
+      - kubelet={{ kube_version }}-00
+      - kubeadm={{ kube_version }}-00
+      - kubectl={{ kube_version }}-00
+    state: present
+    update_cache: yes
+  tags: common
+
+- name: Hold Kubernetes packages at current version
+  ansible.builtin.apt:
+    name:
+      - kubelet
+      - kubeadm
+      - kubectl
+    state: present
+    mark: hold
+  tags: common

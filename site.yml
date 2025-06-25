@@ -1,0 +1,18 @@
+---
+- name: Prepare all nodes (common prerequisites)
+  hosts: all
+  become: yes
+  roles:
+    - kubernetes-common
+
+- name: Bootstrap Kubernetes master
+  hosts: master
+  become: yes
+  roles:
+    - kubernetes-master
+
+- name: Join worker nodes
+  hosts: workers
+  become: yes
+  roles:
+    - kubernetes-worker
